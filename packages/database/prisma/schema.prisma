@@ -1,0 +1,235 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  role          Role     @default(Member)
+  tenantId      String?
+  azureObjectId String?  @unique
+  isAllowed     Boolean  @default(false)
+  avatarUrl     String?
+  createdAt     DateTime @default(now())
+
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+enum Role {
+  Admin
+  Member
+}
+
+model Organisation {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  tenants Tenant[]
+
+  @@map("organisations")
+}
+
+model Tenant {
+  id             String    @id @default(cuid())
+  orgId          String
+  displayName    String
+  intuneClientId String?
+  azureTenantId  String?
+  clientSecret   String?
+  accessToken    String?
+  refreshToken   String?
+  tokenExpiresAt DateTime?
+  deviceCount    Int       @default(0)
+  lastSyncAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  org             Organisation      @relation(fields: [orgId], references: [id])
+  packages        Package[]
+  patchFlows      PatchFlow[]
+  deviceDiscovery DeviceDiscovery[]
+
+  @@map("tenants")
+}
+
+model App {
+  id            String    @id @default(cuid())
+  wingetId      String    @unique
+  name          String
+  publisher     String
+  latestVersion String
+  category      String    @default("Utility")
+  iconUrl       String?
+  description   String?
+  status        AppStatus @default(pending)
+  createdAt     DateTime  @default(now())
+
+  packages       Package[]
+  patchFlows     PatchFlow[]
+  customSettings CustomAppSetting[]
+
+  @@map("apps")
+}
+
+enum AppStatus {
+  validated
+  pending
+  failed
+}
+
+model Package {
+  id               String           @id @default(cuid())
+  appId            String
+  tenantId         String
+  version          String
+  intuneWinPath    String?
+  detectionMethod  String?
+  installCmd       String?
+  uninstallCmd     String?
+  validationStatus    ValidationStatus @default(pending)
+  validationLog       String?
+  fileSize            Int?
+  intuneAppId         String?
+  installerPath       String?
+  detectionScriptPath String?
+  createdAt           DateTime         @default(now())
+
+  app            App             @relation(fields: [appId], references: [id])
+  tenant         Tenant          @relation(fields: [tenantId], references: [id])
+  deploymentJobs DeploymentJob[]
+
+  @@map("packages")
+}
+
+enum ValidationStatus {
+  pending
+  running
+  passed
+  failed
+}
+
+model PatchFlow {
+  id         String   @id @default(cuid())
+  appId      String
+  tenantId   String
+  name       String
+  autoUpdate Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  app    App    @relation(fields: [appId], references: [id])
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  waves  Wave[]
+
+  @@map("patch_flows")
+}
+
+model Wave {
+  id         String     @id @default(cuid())
+  flowId     String
+  name       String
+  groupId    String
+  delayHours Int        @default(0)
+  order      Int
+  status     WaveStatus @default(pending)
+
+  flow           PatchFlow       @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  deploymentJobs DeploymentJob[]
+
+  @@map("waves")
+}
+
+enum WaveStatus {
+  pending
+  active
+  completed
+  failed
+}
+
+model DeploymentJob {
+  id          String    @id @default(cuid())
+  packageId   String
+  waveId      String?
+  status      JobStatus @default(queued)
+  startedAt   DateTime?
+  completedAt DateTime?
+  errorLog    String?
+  createdAt   DateTime  @default(now())
+
+  package Package @relation(fields: [packageId], references: [id])
+  wave    Wave?   @relation(fields: [waveId], references: [id])
+
+  @@map("deployment_jobs")
+}
+
+enum JobStatus {
+  queued
+  running
+  completed
+  failed
+}
+
+model DeviceDiscovery {
+  id               String   @id @default(cuid())
+  tenantId         String
+  appName          String
+  publisher        String
+  installedVersion String
+  deviceCount      Int      @default(0)
+  lastScanned      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("device_discovery")
+}
+
+model CustomAppSetting {
+  id             String  @id @default(cuid())
+  appId          String
+  tenantId       String
+  installArgs    String?
+  preScript      String?
+  postScript     String?
+  registryValues Json?
+
+  app App @relation(fields: [appId], references: [id])
+
+  @@map("custom_app_settings")
+}
+
+model InstantApp {
+  id            String   @id @default(cuid())
+  wingetId      String   @unique
+  name          String
+  publisher     String
+  latestVersion String
+  tags          String[] @default([])
+  lastUpdate    DateTime?
+  updatedAt     DateTime @updatedAt
+  createdAt     DateTime @default(now())
+
+  @@index([name])
+  @@index([publisher])
+  @@map("instant_apps")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String
+  action       String
+  resourceType String
+  resourceId   String
+  timestamp    DateTime @default(now())
+  details      Json?
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}

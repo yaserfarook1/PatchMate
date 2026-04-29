@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "paths": {
+      "@autopack/shared": ["../../packages/shared/src/index.ts"],
+      "@autopack/database": ["../../packages/database/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "../../packages/shared/src/**/*", "../../packages/database/src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

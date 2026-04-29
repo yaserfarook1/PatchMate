@@ -1,0 +1,44 @@
+{
+  "name": "@autopack/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "tsc --project tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@autopack/database": "workspace:*",
+    "@autopack/shared": "workspace:*",
+    "@azure/msal-node": "^5.1.4",
+    "archiver": "^7.0.1",
+    "axios": "^1.7.9",
+    "bullmq": "^5.34.6",
+    "cors": "^2.8.5",
+    "date-fns": "^4.1.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "socket.io": "^4.8.1",
+    "unzipper": "^0.12.3",
+    "yaml": "^2.8.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/archiver": "^6.0.3",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/morgan": "^1.9.9",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.10.0",
+    "@types/unzipper": "^0.10.11",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
