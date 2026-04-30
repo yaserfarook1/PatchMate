@@ -1,24 +1,7 @@
-import { execFile, execSync } from "child_process";
+import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import unzipper from "unzipper";
-
-const TOOL_PATH = path.resolve(__dirname, "../../tools/IntuneWinAppUtil.exe");
-
-let wineBinary: string | null = null;
-if (process.platform === "linux") {
-  for (const candidate of ["/usr/bin/wine64", "/usr/bin/wine", "/usr/local/bin/wine64", "/usr/local/bin/wine"]) {
-    if (fs.existsSync(candidate)) { wineBinary = candidate; break; }
-  }
-  if (!wineBinary) {
-    try {
-      const found = execSync("find / -name 'wine64' -o -name 'wine' 2>/dev/null | head -5").toString().trim();
-      console.log(`[Wine] Search results: ${found || "NONE"}`);
-      if (found) wineBinary = found.split("\n")[0];
-    } catch { /* ignore */ }
-  }
-  console.log(`[Wine] Binary: ${wineBinary ?? "NOT FOUND"}`);
-}
+import archiver from "archiver";
 
 export interface IntuneWinResult {
   encryptedFilePath: string;
@@ -36,140 +19,82 @@ export interface IntuneWinResult {
 }
 
 /**
- * Use Microsoft's official IntuneWinAppUtil.exe to create a properly encrypted
- * .intunewin package, then extract the encryption info and encrypted content.
+ * Create an Intune-compatible encrypted package from an installer file.
+ * Replicates what IntuneWinAppUtil.exe does: ZIP → AES-256-CBC encrypt → metadata.
  */
 export async function createIntuneWinPackage(
   installerPath: string,
   outputDir: string
 ): Promise<IntuneWinResult> {
   const installerFile = path.basename(installerPath);
-
-  // Stage installer in an isolated directory — the tool compresses the ENTIRE -c folder
-  const stageDir = path.join(outputDir, "_stage");
-  if (fs.existsSync(stageDir)) fs.rmSync(stageDir, { recursive: true });
-  fs.mkdirSync(stageDir, { recursive: true });
-  fs.copyFileSync(installerPath, path.join(stageDir, installerFile));
+  const installerSize = fs.statSync(installerPath).size;
+  console.log(`[IntuneWinAppUtil] Starting — source: ${installerFile} (${(installerSize / 1024 / 1024).toFixed(1)} MB)`);
 
   if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-  // Run IntuneWinAppUtil.exe (async — doesn't block the event loop)
-  console.log(`[IntuneWinAppUtil] Starting — source: ${installerFile} (${(fs.statSync(installerPath).size / 1024 / 1024).toFixed(1)} MB)`);
+  // Step 1: ZIP the installer (same as IntuneWinAppUtil's "Compressing the source folder" step)
+  const zipPath = path.join(outputDir, "IntunePackage.zip");
+  await createZip(installerPath, zipPath);
+  const zipSize = fs.statSync(zipPath).size;
+  console.log(`[IntuneWinAppUtil] Compressed: ${(zipSize / 1024 / 1024).toFixed(1)} MB`);
 
-  await new Promise<void>((resolve, reject) => {
-    const isLinux = process.platform === "linux";
-    if (isLinux && !wineBinary) {
-      throw new Error("Wine is not installed — cannot run IntuneWinAppUtil.exe on Linux");
-    }
-    const cmd = isLinux ? wineBinary! : TOOL_PATH;
-    const args = isLinux
-      ? [TOOL_PATH, "-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"]
-      : ["-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"];
+  // Step 2: Encrypt the ZIP with AES-256-CBC (ProfileVersion1)
+  // Intune encrypted file format: [HMAC 32 bytes][IV 16 bytes][AES-CBC ciphertext w/ PKCS7]
+  const zipContent = fs.readFileSync(zipPath);
+  const originalSize = zipContent.length;
 
-    const proc = execFile(
-      cmd,
-      args,
-      { timeout: 300_000, windowsHide: true },
-      (err, stdout, stderr) => {
-        if (err) {
-          console.error("[IntuneWinAppUtil] stderr:", stderr);
-          reject(new Error(`IntuneWinAppUtil failed: ${err.message}`));
-        } else {
-          console.log("[IntuneWinAppUtil] Completed successfully");
-          resolve();
-        }
-      }
-    );
+  const encKey = crypto.randomBytes(32);
+  const iv = crypto.randomBytes(16);
+  const macKey = crypto.randomBytes(32);
 
-    proc.stdout?.on("data", (d: string) => {
-      const line = d.toString().trim();
-      if (line) console.log(`[IntuneWinAppUtil] ${line}`);
-    });
-  });
+  const fileDigest = crypto.createHash("sha256").update(zipContent).digest("base64");
 
-  // Clean up staging directory
-  try { fs.rmSync(stageDir, { recursive: true }); } catch { /* ignore */ }
+  const cipher = crypto.createCipheriv("aes-256-cbc", encKey, iv);
+  const ciphertext = Buffer.concat([cipher.update(zipContent), cipher.final()]);
 
-  // Find the generated .intunewin file
-  const intunewinName = installerFile.replace(/\.[^.]+$/, ".intunewin");
-  let finalPath = path.join(outputDir, intunewinName);
+  // HMAC-SHA256 over IV + ciphertext (Encrypt-then-MAC with authenticated IV)
+  const hmac = crypto.createHmac("sha256", macKey);
+  hmac.update(iv);
+  hmac.update(ciphertext);
+  const macDigest = hmac.digest();
 
-  if (!fs.existsSync(finalPath)) {
-    const found = fs.readdirSync(outputDir).filter((f) => f.endsWith(".intunewin"));
-    if (!found.length) throw new Error("IntuneWinAppUtil produced no .intunewin file");
-    finalPath = path.join(outputDir, found[found.length - 1]);
-  }
+  const encryptedContent = Buffer.concat([macDigest, iv, ciphertext]);
+  const encryptedFilePath = path.join(outputDir, "IntunePackage.intunewin.bin");
+  fs.writeFileSync(encryptedFilePath, encryptedContent);
+  const encryptedSize = encryptedContent.length;
 
-  console.log(`[IntuneWinAppUtil] Output: ${path.basename(finalPath)} (${(fs.statSync(finalPath).size / 1024 / 1024).toFixed(1)} MB)`);
+  // Cleanup temp ZIP
+  try { fs.unlinkSync(zipPath); } catch { /* ignore */ }
 
-  // Extract Detection.xml and IntunePackage.intunewin from the outer ZIP
-  const { encryptionInfo, originalSize } = await extractDetectionXml(finalPath);
-  const encryptedFilePath = await extractEncryptedContent(finalPath, outputDir);
-  const encryptedSize = fs.statSync(encryptedFilePath).size;
-
-  // Clean up the outer .intunewin ZIP (we only need the extracted encrypted file)
-  try { fs.unlinkSync(finalPath); } catch { /* ignore */ }
-
-  return { encryptedFilePath, encryptionInfo, originalSize, encryptedSize };
-}
-
-// ── Extract Detection.xml + encrypted content using random-access ZIP ─────────
-// unzipper.Open.file() reads the central directory first, then extracts specific
-// entries without streaming the entire ZIP sequentially. Much more reliable for
-// large files (141MB encrypted content).
-
-async function extractDetectionXml(intunewinPath: string): Promise<{
-  encryptionInfo: IntuneWinResult["encryptionInfo"];
-  originalSize: number;
-}> {
-  const directory = await unzipper.Open.file(intunewinPath);
-  const xmlEntry = directory.files.find((f) => f.path.endsWith("Detection.xml"));
-  if (!xmlEntry) throw new Error("Detection.xml not found in .intunewin");
-
-  const xmlBuffer = await xmlEntry.buffer();
-  const xmlContent = xmlBuffer.toString("utf-8");
-
-  const extract = (tag: string): string => {
-    const m = xmlContent.match(new RegExp(`<${tag}>([^<]+)</${tag}>`));
-    return m?.[1] ?? "";
-  };
+  console.log(`[IntuneWinAppUtil] Encrypted: ${(encryptedSize / 1024 / 1024).toFixed(1)} MB`);
+  console.log("[IntuneWinAppUtil] Completed successfully");
 
   return {
+    encryptedFilePath,
     encryptionInfo: {
-      encryptionKey: extract("EncryptionKey"),
-      macKey: extract("MacKey"),
-      initializationVector: extract("InitializationVector"),
-      mac: extract("Mac"),
-      profileIdentifier: extract("ProfileIdentifier") || "ProfileVersion1",
-      fileDigest: extract("FileDigest"),
-      fileDigestAlgorithm: extract("FileDigestAlgorithm") || "SHA256",
+      encryptionKey: encKey.toString("base64"),
+      macKey: macKey.toString("base64"),
+      initializationVector: iv.toString("base64"),
+      mac: macDigest.toString("base64"),
+      profileIdentifier: "ProfileVersion1",
+      fileDigest,
+      fileDigestAlgorithm: "SHA256",
     },
-    originalSize: parseInt(extract("UnencryptedContentSize") || "0", 10),
+    originalSize,
+    encryptedSize,
   };
 }
 
-async function extractEncryptedContent(intunewinPath: string, outputDir: string): Promise<string> {
-  const directory = await unzipper.Open.file(intunewinPath);
-  const contentEntry = directory.files.find((f) =>
-    f.path.includes("IntunePackage.intunewin")
-  );
-  if (!contentEntry) throw new Error("IntunePackage.intunewin not found in package");
+function createZip(filePath: string, outputPath: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const output = fs.createWriteStream(outputPath);
+    const archive = archiver("zip", { zlib: { level: 6 } });
 
-  const outputPath = path.join(outputDir, "IntunePackage.intunewin.bin");
+    output.on("close", resolve);
+    archive.on("error", reject);
 
-  // Stream the entry to disk (avoids loading 141MB into memory)
-  await new Promise<void>((resolve, reject) => {
-    const readStream = contentEntry.stream();
-    const writeStream = fs.createWriteStream(outputPath);
-    readStream.pipe(writeStream);
-    writeStream.on("finish", resolve);
-    writeStream.on("error", reject);
-    readStream.on("error", reject);
+    archive.pipe(output);
+    archive.file(filePath, { name: path.basename(filePath) });
+    archive.finalize();
   });
-
-  const size = fs.statSync(outputPath).size;
-  if (size === 0) throw new Error("Extracted encrypted content is empty");
-
-  console.log(`[IntuneWinAppUtil] Extracted encrypted content: ${(size / 1024 / 1024).toFixed(1)} MB`);
-  return outputPath;
 }
