@@ -9,6 +9,7 @@ import flowsRouter from "./flows.js";
 import radarRouter from "./radar.js";
 import settingsRouter from "./settings.js";
 import instantAppsRouter from "./instantApps.js";
+import riskRouter from "./risk.js";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use("/flows", flowsRouter);
 router.use("/radar", radarRouter);
 router.use("/settings", settingsRouter);
 router.use("/instant-apps", instantAppsRouter);
+router.use("/risk", riskRouter);
 
 router.get("/dashboard/stats", requireAuth, async (req, res) => {
   const tenantId = req.query.tenantId as string | undefined;

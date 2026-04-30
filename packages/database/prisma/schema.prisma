@@ -56,6 +56,8 @@ model Tenant {
   packages        Package[]
   patchFlows      PatchFlow[]
   deviceDiscovery DeviceDiscovery[]
+  tenantProfile   TenantProfile?
+  riskReports     RiskReport[]
 
   @@map("tenants")
 }
@@ -232,4 +234,32 @@ model AuditLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model TenantProfile {
+  id                   String   @id @default(cuid())
+  tenantId             String   @unique
+  groupClassifications Json     @default("{}")
+  appUsagePatterns     Json     @default("{}")
+  deviceProfiles       Json     @default("{}")
+  lastLearnedAt        DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("tenant_profiles")
+}
+
+model RiskReport {
+  id          String   @id @default(cuid())
+  tenantId    String
+  entries     Json     @default("[]")
+  summary     Json     @default("{}")
+  generatedAt DateTime @default(now())
+  expiresAt   DateTime
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@map("risk_reports")
 }

@@ -7,6 +7,7 @@ import {
   Building2,
   GitBranch,
   Radar,
+  Shield,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { label: "Tenants",     icon: Building2,       href: "/tenants" },
   { label: "Patch Flows", icon: GitBranch,       href: "/flows" },
   { label: "Radar",       icon: Radar,           href: "/radar" },
+  { label: "Risk Analysis", icon: Shield,        href: "/risk-analysis" },
   { label: "Settings",    icon: Settings,        href: "/settings" },
 ];
 

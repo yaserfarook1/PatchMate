@@ -77,7 +77,24 @@
       "Bash(git branch *)",
       "Bash(git remote *)",
       "Bash(git push *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(az acr build *)",
+      "Bash(az acr repository show-tags *)",
+      "Bash(PYTHONIOENCODING=utf-8 az acr build *)",
+      "Bash(tar --exclude='node_modules' --exclude='.git' --exclude='dist' --exclude='.turbo' --exclude='uploads' --exclude='*.intunewin' --exclude='*.enc' --exclude='.env' --exclude='.claude' -czf /tmp/patchmate-build.tar.gz .)",
+      "Read(//tmp/**)",
+      "Bash(rm -rf /tmp/patchmate-ctx)",
+      "Bash(mkdir -p /tmp/patchmate-ctx)",
+      "Bash(tar -xzf /tmp/patchmate-build.tar.gz -C /tmp/patchmate-ctx)",
+      "Bash(az containerapp update *)",
+      "Bash(az acr *)",
+      "Bash(az containerapp exec *)",
+      "Bash(az containerapp *)",
+      "Bash(PYTHONIOENCODING=utf-8 az acr task logs -r patchmateacr --run-id cch)",
+      "Bash(PYTHONIOENCODING=utf-8 az acr task logs -r patchmateacr --run-id ccj)",
+      "Bash(npx dotenv *)",
+      "PowerShell(Set-Location \"D:\\\\Development\\\\IntunePackager\\\\packages\\\\database\"; npx dotenv -e ../../.env -- npx prisma generate 2>&1)",
+      "Bash(PYTHONIOENCODING=utf-8 az acr task logs -r patchmateacr --run-id ccv)"
     ]
   }
 }

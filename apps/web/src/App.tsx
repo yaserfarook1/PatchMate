@@ -19,6 +19,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { InstantAppsPage } from "./pages/InstantAppsPage";
 import { InstantAppDetailPage } from "./pages/InstantAppDetailPage";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
+import RiskAnalysisPage from "./pages/RiskAnalysisPage";
 
 export default function App() {
   return (
@@ -42,6 +43,7 @@ export default function App() {
         <Route path="/flows/new" element={<FlowNewPage />} />
         <Route path="/flows/:id" element={<FlowDetailPage />} />
         <Route path="/radar" element={<RadarPage />} />
+        <Route path="/risk-analysis" element={<RiskAnalysisPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
     </Routes>
