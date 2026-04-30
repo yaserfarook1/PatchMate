@@ -69,8 +69,8 @@ export function BlastRadiusMap({ data, width = 900, height = 600 }: Props) {
       .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
 
     const pack = d3.pack<typeof data>()
-      .size([width - 4, height - 4])
-      .padding(20);
+      .size([width * 2.2, height * 2.2])
+      .padding(200);
 
     pack(root as any);
 
@@ -180,14 +180,15 @@ export function BlastRadiusMap({ data, width = 900, height = 600 }: Props) {
       .attr("pointer-events", "none")
       .text((d: any) => `${d.data.memberCount} devices`);
 
-    // App bubbles
+    // App bubbles (scaled up 1.8x for visibility)
+    const appScale = 1.8;
     container.selectAll(".app-circle")
       .data(appNodes)
       .join("circle")
       .attr("class", "app-circle")
       .attr("cx", (d: any) => d.x)
       .attr("cy", (d: any) => d.y)
-      .attr("r", (d: any) => d.r)
+      .attr("r", (d: any) => d.r * appScale)
       .attr("fill", (d: any) => {
         const sev = d.data.severity || "current";
         return SEVERITY_FILL[sev as keyof typeof SEVERITY_FILL] + "30";
@@ -212,35 +213,35 @@ export function BlastRadiusMap({ data, width = 900, height = 600 }: Props) {
       .on("mouseenter", function (_, d: any) {
         d3.select(this).transition().duration(200)
           .attr("stroke-width", 2.5)
-          .attr("r", (d as any).r + 2);
+          .attr("r", (d as any).r * appScale + 3);
       })
       .on("mouseleave", function (_, d: any) {
         d3.select(this).transition().duration(200)
           .attr("stroke-width", 1)
-          .attr("r", (d as any).r);
+          .attr("r", (d as any).r * appScale);
       });
 
     // App labels (only show for larger bubbles)
     container.selectAll(".app-label")
-      .data(appNodes.filter((d: any) => d.r > 18))
+      .data(appNodes.filter((d: any) => d.r * appScale > 18))
       .join("text")
       .attr("class", "app-label")
       .attr("x", (d: any) => d.x)
       .attr("y", (d: any) => d.y - 2)
       .attr("text-anchor", "middle")
       .attr("fill", "#e4e4e7")
-      .attr("font-size", (d: any) => Math.max(6, Math.min(10, d.r / 3)))
+      .attr("font-size", (d: any) => Math.max(8, Math.min(14, (d.r * appScale) / 3)))
       .attr("font-family", "Inter, sans-serif")
       .attr("font-weight", "500")
       .text((d: any) => {
         const name = d.data.name;
-        const max = Math.floor(d.r / 3.5);
+        const max = Math.floor((d.r * appScale) / 3);
         return name.length > max ? name.slice(0, max - 1) + ".." : name;
       });
 
     // Device count inside app bubbles
     container.selectAll(".app-count")
-      .data(appNodes.filter((d: any) => d.r > 14))
+      .data(appNodes.filter((d: any) => d.r * appScale > 14))
       .join("text")
       .attr("class", "app-count")
       .attr("x", (d: any) => d.x)

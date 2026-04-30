@@ -60,6 +60,16 @@ export function createApp() {
 
   app.use("/api", apiRouter);
 
+  // In production, serve the React frontend as static files
+  if (config.NODE_ENV === "production") {
+    const path = require("path");
+    const frontendDist = path.resolve(__dirname, "../../web/dist");
+    app.use(express.static(frontendDist));
+    app.get("*", (_req, res) => {
+      res.sendFile(path.join(frontendDist, "index.html"));
+    });
+  }
+
   app.use(errorHandler);
 
   return app;
