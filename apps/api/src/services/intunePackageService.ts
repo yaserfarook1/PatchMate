@@ -43,7 +43,7 @@ export async function createIntuneWinPackage(
 
   await new Promise<void>((resolve, reject) => {
     const isLinux = process.platform === "linux";
-    const cmd = isLinux ? "wine64" : TOOL_PATH;
+    const cmd = isLinux ? "/usr/bin/wine64" : TOOL_PATH;
     const args = isLinux
       ? [TOOL_PATH, "-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"]
       : ["-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"];
