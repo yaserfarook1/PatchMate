@@ -141,7 +141,45 @@ router.post("/microsoft-callback", async (req, res) => {
   res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 });
 
-// Dev login removed — Entra-only authentication
+// ── Bootstrap: first-time setup (only works when no tenant exists) ────────────
+
+router.post("/bootstrap", async (req, res) => {
+  const existingTenant = await prisma.tenant.findFirst();
+  if (existingTenant) {
+    res.status(403).json({ code: "ALREADY_SETUP", message: "Bootstrap disabled — a tenant already exists" });
+    return;
+  }
+
+  const { azureTenantId, clientId, clientSecret, displayName, adminEmail, adminName } = req.body;
+  if (!azureTenantId || !clientId || !displayName || !adminEmail || !adminName) {
+    res.status(400).json({ code: "MISSING_FIELDS", message: "azureTenantId, clientId, displayName, adminEmail, adminName required" });
+    return;
+  }
+
+  let org = await prisma.organisation.findFirst();
+  if (!org) {
+    org = await prisma.organisation.create({ data: { id: "org_default", name: displayName } });
+  }
+
+  const tenant = await prisma.tenant.create({
+    data: {
+      id: `tenant_${azureTenantId}`,
+      orgId: org.id,
+      displayName,
+      intuneClientId: clientId,
+      azureTenantId,
+      clientSecret: clientSecret || null,
+    },
+  });
+
+  const user = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: { name: adminName, role: "Admin", isAllowed: true },
+    create: { email: adminEmail, name: adminName, role: "Admin", isAllowed: true },
+  });
+
+  res.status(201).json({ message: "Bootstrap complete", tenantId: tenant.id, userId: user.id });
+});
 
 // ── Current user ──────────────────────────────────────────────────────────────
 
