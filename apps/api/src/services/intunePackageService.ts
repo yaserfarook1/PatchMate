@@ -1,9 +1,24 @@
-import { execFile } from "child_process";
+import { execFile, execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import unzipper from "unzipper";
 
 const TOOL_PATH = path.resolve(__dirname, "../../tools/IntuneWinAppUtil.exe");
+
+let wineBinary: string | null = null;
+if (process.platform === "linux") {
+  for (const candidate of ["/usr/bin/wine64", "/usr/bin/wine", "/usr/local/bin/wine64", "/usr/local/bin/wine"]) {
+    if (fs.existsSync(candidate)) { wineBinary = candidate; break; }
+  }
+  if (!wineBinary) {
+    try {
+      const found = execSync("find / -name 'wine64' -o -name 'wine' 2>/dev/null | head -5").toString().trim();
+      console.log(`[Wine] Search results: ${found || "NONE"}`);
+      if (found) wineBinary = found.split("\n")[0];
+    } catch { /* ignore */ }
+  }
+  console.log(`[Wine] Binary: ${wineBinary ?? "NOT FOUND"}`);
+}
 
 export interface IntuneWinResult {
   encryptedFilePath: string;
@@ -43,7 +58,10 @@ export async function createIntuneWinPackage(
 
   await new Promise<void>((resolve, reject) => {
     const isLinux = process.platform === "linux";
-    const cmd = isLinux ? "/usr/bin/wine64" : TOOL_PATH;
+    if (isLinux && !wineBinary) {
+      throw new Error("Wine is not installed — cannot run IntuneWinAppUtil.exe on Linux");
+    }
+    const cmd = isLinux ? wineBinary! : TOOL_PATH;
     const args = isLinux
       ? [TOOL_PATH, "-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"]
       : ["-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"];
