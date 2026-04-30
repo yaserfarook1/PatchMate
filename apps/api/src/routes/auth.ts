@@ -86,7 +86,8 @@ router.post("/microsoft-callback", async (req, res) => {
     );
     tokenData = data;
   } catch (err: any) {
-    const msg = err.response?.data?.error_description ?? "Token exchange failed";
+    const msg = err.response?.data?.error_description ?? err.response?.data?.error ?? "Token exchange failed";
+    console.error("[Auth] Token exchange failed:", msg);
     res.status(401).json({ code: "TOKEN_FAILED", message: msg });
     return;
   }

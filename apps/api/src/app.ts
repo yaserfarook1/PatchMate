@@ -10,8 +10,8 @@ import { errorHandler } from "./middleware/errorHandler.js";
 export function createApp() {
   const app = express();
 
-  // Trust proxy when behind Azure Container Apps / load balancer
-  app.set("trust proxy", true);
+  // Trust 1 proxy hop (Azure Container Apps load balancer)
+  app.set("trust proxy", 1);
 
   app.use(helmet());
 
