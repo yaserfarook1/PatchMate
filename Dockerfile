@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-RUN npm install -g pnpm@10.33.2
+RUN npm install -g pnpm@10.33.2 tsx
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json .npmrc ./
 COPY apps/api/package.json apps/api/
@@ -23,4 +23,4 @@ ENV NODE_ENV=production
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["npx", "tsx", "apps/api/src/index.ts"]
+CMD ["tsx", "apps/api/src/index.ts"]
