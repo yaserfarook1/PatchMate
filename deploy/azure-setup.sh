@@ -2,7 +2,12 @@
 # PatchMate Azure Deployment Script
 # Run this from Azure Cloud Shell or local Azure CLI
 
-# ── Variables (change these) ──────────────────────────────────────────────────
+# ── Subscription ──────────────────────────────────────────────────────────────
+SUBSCRIPTION="0a2d21ac-e2ce-45e5-92b2-c1c4fb023b27"
+echo "Setting subscription to PCSASSURE Microsoft Azure Sponsorship..."
+az account set --subscription "$SUBSCRIPTION"
+
+# ── Variables ─────────────────────────────────────────────────────────────────
 RESOURCE_GROUP="patchmate-rg"
 LOCATION="eastus"
 APP_NAME="patchmate-app"
