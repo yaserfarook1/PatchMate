@@ -42,9 +42,15 @@ export async function createIntuneWinPackage(
   console.log(`[IntuneWinAppUtil] Starting — source: ${installerFile} (${(fs.statSync(installerPath).size / 1024 / 1024).toFixed(1)} MB)`);
 
   await new Promise<void>((resolve, reject) => {
+    const isLinux = process.platform === "linux";
+    const cmd = isLinux ? "wine64" : TOOL_PATH;
+    const args = isLinux
+      ? [TOOL_PATH, "-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"]
+      : ["-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"];
+
     const proc = execFile(
-      TOOL_PATH,
-      ["-c", stageDir, "-s", installerFile, "-o", outputDir, "-q"],
+      cmd,
+      args,
       { timeout: 300_000, windowsHide: true },
       (err, stdout, stderr) => {
         if (err) {
