@@ -8,7 +8,7 @@ echo "Setting subscription to PCSASSURE Microsoft Azure Sponsorship..."
 az account set --subscription "$SUBSCRIPTION"
 
 # ── Variables ─────────────────────────────────────────────────────────────────
-RESOURCE_GROUP="patchmate-rg"
+RESOURCE_GROUP="patchmate-prod"
 LOCATION="westus2"
 APP_NAME="patchmate-app"
 DB_SERVER="patchmate-db"
