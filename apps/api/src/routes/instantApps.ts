@@ -199,7 +199,7 @@ router.post("/deploy", requireAuth, requirePermission("PACKAGE_BUILD"), async (r
             : `"${require("path").basename(result.filePath)}" ${detection.silentSwitch}`,
           detectionMethod: detection.msiProductCode
             ? `MSI: ${detection.msiProductCode}`
-            : `Registry: HKLM\\SOFTWARE\\${app.name}`,
+            : `Script: ${app.name}`,
           fileSize: intuneResult.encryptedSize,
         },
       });

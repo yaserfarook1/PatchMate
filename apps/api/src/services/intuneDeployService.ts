@@ -261,17 +261,24 @@ function buildDetectionRules(detectionMethod: string | null): object[] {
     }
   }
 
-  // Fallback: registry key existence under Uninstall hive
-  return [{
-    "@odata.type": "#microsoft.graph.win32LobAppRegistryRule",
-    ruleType: "detection",
-    keyPath: "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-    valueName: "",
-    operationType: "exists",
-    operator: "notConfigured",
-    comparisonValue: null,
-    check32BitOn64System: false,
-  }];
+  if (detectionMethod?.startsWith("Script:")) {
+    const appName = detectionMethod.replace("Script:", "").trim();
+    const script = [
+      `$app = Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",`,
+      `  "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*" -ErrorAction SilentlyContinue |`,
+      `  Where-Object { $_.DisplayName -like "*${appName}*" }`,
+      `if ($app) { Write-Output "Detected"; exit 0 } else { exit 1 }`,
+    ].join("\n");
+    return buildScriptDetectionRule(script);
+  }
+
+  // Fallback: PowerShell script searching Uninstall registry
+  return buildScriptDetectionRule([
+    `$app = Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*",`,
+    `  "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*" -ErrorAction SilentlyContinue |`,
+    `  Where-Object { $_.DisplayName -ne $null }`,
+    `if ($app) { Write-Output "Detected"; exit 0 } else { exit 1 }`,
+  ].join("\n"));
 }
 
 // ── PowerShell script detection rule ─────────────────────────────────────────
