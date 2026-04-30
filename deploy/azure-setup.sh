@@ -9,7 +9,7 @@ az account set --subscription "$SUBSCRIPTION"
 
 # ── Variables ─────────────────────────────────────────────────────────────────
 RESOURCE_GROUP="patchmate-rg"
-LOCATION="eastus"
+LOCATION="westus2"
 APP_NAME="patchmate-app"
 DB_SERVER="patchmate-db"
 DB_NAME="patchmate"
