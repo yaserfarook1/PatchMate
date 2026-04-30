@@ -15,7 +15,10 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: uploadsDir,
-  filename: (_, file, cb) => cb(null, `upload_${Date.now()}_${file.originalname}`),
+  filename: (_, file, cb) => {
+    const safeName = file.originalname.replace(/[\/\\:*?"<>|]/g, "_").replace(/\.\./g, "_");
+    cb(null, `upload_${Date.now()}_${safeName}`);
+  },
 });
 
 const upload = multer({
@@ -91,12 +94,20 @@ router.get("/:id/download", requireAuth, async (req, res) => {
     return;
   }
 
-  if (!fs.existsSync(pkg.intuneWinPath)) {
+  // Path validation — prevent directory traversal
+  const resolvedPath = path.resolve(pkg.intuneWinPath);
+  const uploadsDir = path.resolve(config.UPLOADS_DIR);
+  if (!resolvedPath.startsWith(uploadsDir) || resolvedPath.includes("..")) {
+    res.status(403).json({ code: "INVALID_PATH", message: "Access denied" });
+    return;
+  }
+
+  if (!fs.existsSync(resolvedPath)) {
     res.status(404).json({ code: "FILE_MISSING", message: "Package file has been removed" });
     return;
   }
 
-  res.download(pkg.intuneWinPath, `${pkg.id}.intunewin`);
+  res.download(resolvedPath, `${pkg.id}.intunewin`);
 });
 
 router.post(

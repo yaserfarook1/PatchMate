@@ -7,6 +7,9 @@ export function getSocket(): Socket {
     socket = io("/", {
       autoConnect: true,
       transports: ["websocket", "polling"],
+      auth: {
+        token: localStorage.getItem("autopack_token") ?? "",
+      },
     });
   }
   return socket;

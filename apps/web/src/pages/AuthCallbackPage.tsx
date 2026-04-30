@@ -7,7 +7,7 @@ import { useAuth } from "../contexts/AuthContext";
 export function AuthCallbackPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { } = useAuth();
   const [status, setStatus] = useState<"loading" | "denied" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [deniedUser, setDeniedUser] = useState<{ name?: string; email?: string }>({});

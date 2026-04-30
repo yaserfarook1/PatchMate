@@ -10,8 +10,6 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
-  const mockRole = localStorage.getItem("autopack_mock_role") ?? "Admin";
-  config.headers["X-Mock-Role"] = mockRole;
   return config;
 });
 

@@ -23,9 +23,9 @@ scheduleInstantAppSync().catch((err: Error) =>
 );
 
 httpServer.listen(config.PORT, () => {
-  console.log(`\n🚀 AutoPack API running at http://localhost:${config.PORT}`);
+  console.log(`\n🚀 PatchMate API running at http://localhost:${config.PORT}`);
   console.log(`   Environment: ${config.NODE_ENV}`);
-  console.log(`   Mock Auth: ${config.MOCK_AUTH ? "enabled" : "disabled"}`);
+  console.log(`   Auth: Entra ID (Microsoft OAuth)`);
   console.log(`   Frontend: ${config.FRONTEND_URL}\n`);
 });
 

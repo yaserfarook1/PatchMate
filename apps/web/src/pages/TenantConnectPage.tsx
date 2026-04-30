@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ExternalLink, ShieldCheck, Info } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "../lib/api";
 
 export function TenantConnectPage() {
   const navigate = useNavigate();
@@ -12,19 +14,21 @@ export function TenantConnectPage() {
   });
   const [step, setStep] = useState<1 | 2>(1);
 
-  function handleConnect(e: React.FormEvent) {
+  async function handleConnect(e: React.FormEvent) {
     e.preventDefault();
     if (!form.azureTenantId || !form.clientId || !form.displayName) return;
 
-    const params = new URLSearchParams({
-      azureTenantId: form.azureTenantId,
-      clientId: form.clientId,
-      displayName: form.displayName,
-      ...(form.clientSecret ? { clientSecret: form.clientSecret } : {}),
-    });
-
-    // Redirect to API which redirects to Microsoft OAuth
-    window.location.href = `/api/tenants/oauth-start?${params}`;
+    try {
+      const { data } = await api.post("/tenants/oauth-start", {
+        azureTenantId: form.azureTenantId,
+        clientId: form.clientId,
+        clientSecret: form.clientSecret || undefined,
+        displayName: form.displayName,
+      });
+      window.location.href = data.authUrl;
+    } catch (err: any) {
+      toast.error(err.response?.data?.message ?? "Failed to start OAuth");
+    }
   }
 
   return (

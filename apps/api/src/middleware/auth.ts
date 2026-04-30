@@ -17,27 +17,17 @@ declare global {
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
-  if (config.MOCK_AUTH) {
-    const mockRole = (req.headers["x-mock-role"] as string) || "Admin";
-    req.user = {
-      id: "user_admin_seed",
-      email: "admin@autopack.dev",
-      name: "Alex Admin",
-      role: mockRole,
-      tenantId: "tenant_prod_seed",
-    };
-    return next();
-  }
-
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ code: "UNAUTHORIZED", message: "No token provided" });
+    res.status(401).json({ code: "UNAUTHORIZED", message: "Authentication required" });
     return;
   }
 
   const token = authHeader.replace("Bearer ", "");
   try {
-    const payload = jwt.verify(token, config.JWT_SECRET) as Express.Request["user"];
+    const payload = jwt.verify(token, config.JWT_SECRET, {
+      algorithms: ["HS256"],
+    }) as Express.Request["user"];
     req.user = payload;
     next();
   } catch {

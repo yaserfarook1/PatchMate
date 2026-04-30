@@ -141,35 +141,7 @@ router.post("/microsoft-callback", async (req, res) => {
   res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
 });
 
-// ── Dev bypass login (only when MOCK_AUTH=true) ───────────────────────────────
-
-router.post("/login", async (req, res) => {
-  if (!config.MOCK_AUTH) {
-    res.status(403).json({ code: "DISABLED", message: "Dev login disabled — use Microsoft sign-in" });
-    return;
-  }
-
-  const { email, role } = req.body;
-  if (!email) {
-    res.status(400).json({ code: "MISSING_EMAIL", message: "Email is required" });
-    return;
-  }
-
-  let user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    user = await prisma.user.create({
-      data: { email, name: email.split("@")[0], role: (role as any) || "Member", isAllowed: true },
-    });
-  }
-
-  const token = jwt.sign(
-    { id: user.id, email: user.email, name: user.name, role: user.role, tenantId: user.tenantId },
-    config.JWT_SECRET,
-    { expiresIn: "7d" }
-  );
-
-  res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
-});
+// Dev login removed — Entra-only authentication
 
 // ── Current user ──────────────────────────────────────────────────────────────
 

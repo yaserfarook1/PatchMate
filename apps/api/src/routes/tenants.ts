@@ -26,8 +26,8 @@ router.get("/", requireAuth, async (_req, res) => {
 
 // ── OAuth: start  (MUST be before /:id) ──────────────────────────────────────
 
-router.get("/oauth-start", requireAuth, requirePermission("TENANT_MANAGE"), async (req, res) => {
-  const { azureTenantId, clientId, clientSecret, displayName } = req.query as Record<string, string>;
+router.post("/oauth-start", requireAuth, requirePermission("TENANT_MANAGE"), async (req, res) => {
+  const { azureTenantId, clientId, clientSecret, displayName } = req.body;
 
   if (!azureTenantId || !clientId || !displayName) {
     res.status(400).json({
@@ -56,7 +56,7 @@ router.get("/oauth-start", requireAuth, requirePermission("TENANT_MANAGE"), asyn
   });
 
   const authUrl = `https://login.microsoftonline.com/${azureTenantId}/oauth2/v2.0/authorize?${params}`;
-  res.redirect(authUrl);
+  res.json({ authUrl });
 });
 
 // ── OAuth: callback  (MUST be before /:id) ───────────────────────────────────
@@ -231,7 +231,8 @@ router.post("/:id/sync", requireAuth, requirePermission("TENANT_MANAGE"), async 
     data: { lastSyncAt: new Date(), ...(deviceCount > 0 && { deviceCount }) },
   });
 
-  res.json(tenant);
+  const { accessToken: _a, refreshToken: _r, clientSecret: _c, ...safeTenant } = tenant;
+  res.json(safeTenant);
 });
 
 // ── Update ────────────────────────────────────────────────────────────────────
@@ -244,7 +245,8 @@ router.patch("/:id", requireAuth, requirePermission("TENANT_MANAGE"), async (req
     data: { ...(displayName && { displayName }) },
   });
 
-  res.json(tenant);
+  const { accessToken: _a2, refreshToken: _r2, clientSecret: _c2, ...safePatch } = tenant;
+  res.json(safePatch);
 });
 
 // ── Delete ────────────────────────────────────────────────────────────────────

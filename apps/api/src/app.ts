@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import rateLimit from "express-rate-limit";
 import { config } from "./config.js";
 import apiRouter from "./routes/index.js";
 import { errorHandler } from "./middleware/errorHandler.js";
@@ -9,17 +10,43 @@ import { errorHandler } from "./middleware/errorHandler.js";
 export function createApp() {
   const app = express();
 
-  app.use(
-    helmet({
-      crossOriginEmbedderPolicy: false,
-      contentSecurityPolicy: false,
-    })
-  );
+  app.use(helmet());
 
   app.use(
     cors({
       origin: config.FRONTEND_URL,
       credentials: true,
+    })
+  );
+
+  // Global rate limit: 200 requests per minute per IP
+  app.use(
+    rateLimit({
+      windowMs: 60_000,
+      max: 200,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { code: "RATE_LIMITED", message: "Too many requests — try again in a minute" },
+    })
+  );
+
+  // Stricter limit for auth endpoints
+  app.use(
+    "/api/auth",
+    rateLimit({
+      windowMs: 60_000,
+      max: 15,
+      message: { code: "RATE_LIMITED", message: "Too many auth attempts" },
+    })
+  );
+
+  // Stricter limit for deploy endpoints
+  app.use(
+    "/api/instant-apps/deploy",
+    rateLimit({
+      windowMs: 60_000,
+      max: 10,
+      message: { code: "RATE_LIMITED", message: "Deploy rate limit reached" },
     })
   );
 
