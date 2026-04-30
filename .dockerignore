@@ -1,7 +1,7 @@
-node_modules
-dist
+**/node_modules
+**/dist
 .git
-.turbo
+**/.turbo
 uploads
 *.intunewin
 *.enc
